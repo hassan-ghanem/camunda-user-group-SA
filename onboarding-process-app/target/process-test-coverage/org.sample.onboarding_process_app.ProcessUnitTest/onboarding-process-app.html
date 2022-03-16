@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+
+  <meta http-equiv="cache-control" content="max-age=0" />
+  <meta http-equiv="cache-control" content="no-cache" />
+  <meta http-equiv="expires" content="0" />
+  <meta http-equiv="pragma" content="no-cache" />
+
+  <style type="text/css">
+    html, body, #canvas {
+      height: 100%;
+      padding: 0;
+    }
+    
+    .transaction-boundary {
+      background-color: rgba(180, 21, 21, 0.7);
+      border-radius: 1px;
+      min-height: 50px;
+      width: 3px;
+    }
+
+    .execution-listener {
+      background-color: rgba(21, 66, 180, 0.7);
+      color: White;
+      border-radius: 5px;
+      font-family: Arial;
+      font-size: 12px;
+      padding: 5px;
+      min-height: 16px;
+      min-width: 16px;
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    .highlight:not(.djs-connection) .djs-visual > :nth-child(1) {
+      fill: rgba(66, 180, 21, 0.7) !important; /* color elements as green */
+    }
+    
+    .highlight-running .djs-visual > :nth-child(1) {
+    	fill: rgba(0, 198, 218, 0.7) !important; /* color still running flow nodes as blue */
+    }
+    
+    #info-box {
+   	  margin-left: 20px;
+      margin-top: 15px;
+      padding: 10px;
+      table-layout: fixed;
+      border-collapse: collapse;
+      position: absolute;
+      top: 0px;
+      left: 0px;
+      font-family: sans-serif;
+      line-height: 150%;
+      font-size: 80%;
+      z-index: 1000;
+      background-color: rgba(255,255,255,0.90);
+      border-radius: 10px;
+    }
+  </style>
+
+  <title>Process Test Coverage Report</title>
+</head>
+<body>
+
+  <div id="info-box">
+	<div>Process Definition Name: onboarding-process-app</div>
+	<div>Coverage: 0%</div>
+	<div>Test Class: org.sample.onboarding_process_app.ProcessUnitTest</div>
+	
+  </div>
+  
+  <!-- element to draw bpmn diagram in -->
+  <div id="canvas"></div>
+
+  <!-- scripts -->
+
+  <!-- seed dependencies (required for demo only) -->
+  <script src="../bower_components/jquery/dist/jquery.js"></script>
+
+  <!-- bpmn-js viewer -->
+  <script src="../bower_components/bpmn-js/dist/bpmn-navigated-viewer.js"></script>
+
+  <!-- application -->
+  <script>
+    (function(NavigatedViewer, $) {
+
+      // create viewer
+      var bpmnViewer = new NavigatedViewer({
+        container: '#canvas'
+      });
+
+
+      // import function
+      function importXML(xml) {
+
+        // import diagram
+        bpmnViewer.importXML(xml, function(err) {
+
+          if (err) {
+            return console.error('could not import BPMN 2.0 diagram', err);
+          }
+
+          var canvas = bpmnViewer.get('canvas'),
+              overlays = bpmnViewer.get('overlays');
+
+
+          // zoom to fit full viewport
+          canvas.zoom('fit-viewport', true);
+
+      // visualizations          
+      elementRegistry = bpmnViewer.get('elementRegistry');
+      var elements = elementRegistry.getAll();
+      console.log(elements);
+      for (var i = 0; i < elements.length; i++) {
+        var element = elements[i];
+        if (element.type != 'label') {
+          
+          // Transaction Boundaries
+          if (element.businessObject.$attrs["camunda:asyncBefore"]
+                || element.businessObject.$attrs["camunda:async"]
+                || element.type == 'bpmn:ReceiveTask'
+                || element.type == 'bpmn:UserTask'
+                || element.type == 'bpmn:IntermediateCatchEvent'
+             ) {
+            overlays.add(element.id, 'note', {
+              position: {
+                bottom: (element.type == 'bpmn:IntermediateCatchEvent' ? 18 : 40),
+                left: -4
+              },
+              html: '<div class="transaction-boundary"></div>'
+            });
+          }
+          if (element.businessObject.$attrs["camunda:asyncAfter"]) {
+            overlays.add(element.id, 'note', {
+              position: {
+                bottom: 19,
+                right: -1
+              },
+              html: '<div class="transaction-boundary"></div>'
+            });
+          }
+          
+          if (element.businessObject.extensionElements) {
+            var extensionElements = element.businessObject.extensionElements.values;
+            for (var j = 0; j < extensionElements.length; j++) {
+              console.log(extensionElements[j]);
+              if (extensionElements[j].$type == 'camunda:executionListener') {
+                if (extensionElements[j].event == 'end') {
+                  overlays.add(element.id, 'note', {
+                    position: {
+                      bottom: 0,
+                      right: 0
+                    },
+                    html: '<div class="execution-listener">' + extensionElements[j].expression + '</div>'
+                  });
+                }
+                if (extensionElements[j].event == 'start') {
+                  overlays.add(element.id, 'note', {
+                    position: {
+                      bottom: 0,
+                      left: 0
+                    },
+                    html: '<div class="execution-listener">' + extensionElements[j].expression + '</div>'
+                  });
+                }
+              }
+            }
+          }
+ 
+ 		  if (element.type == 'bpmn:SequenceFlow' && element.businessObject.conditionExpression) {
+ 		      var position = {
+                      left: 0
+                    }
+              if (element.waypoints[0].y > element.waypoints[element.waypoints.length - 1].y) {
+              	position.top = -29;
+              } else {
+                position.bottom = -3;
+              }    
+          	  overlays.add(element.id, 'note', {
+                    position: position,
+                    html: '<div class="execution-listener">' + element.businessObject.conditionExpression.body + '</div>'
+                  }); 
+		  }
+          
+          if (element.businessObject.$attrs["camunda:delegateExpression"]) {
+            overlays.add(element.id, 'note', {
+              position: {
+                bottom: -3,
+                left: 0
+              },
+              html: '<div class="execution-listener">' + element.businessObject.$attrs["camunda:delegateExpression"] + '</div>'
+            });
+          }
+          
+        }
+      }          
+          //YOUR ANNOTATIONS GO HERE
+
+        });
+      }
+
+
+      var diagramXML = '<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http:\/\/www.omg.org\/spec\/BPMN\/20100524\/MODEL\" xmlns:bpmndi=\"http:\/\/www.omg.org\/spec\/BPMN\/20100524\/DI\" xmlns:di=\"http:\/\/www.omg.org\/spec\/DD\/20100524\/DI\" xmlns:dc=\"http:\/\/www.omg.org\/spec\/DD\/20100524\/DC\" xmlns:xsi=\"http:\/\/www.w3.org\/2001\/XMLSchema-instance\" xmlns:camunda=\"http:\/\/camunda.org\/schema\/1.0\/bpmn\" id=\"Definitions_1\" targetNamespace=\"http:\/\/bpmn.io\/schema\/bpmn\" exporter=\"Camunda Modeler\" exporterVersion=\"4.11.1\">\n  <bpmn:process id=\"onboarding-process-app\" name=\"onboarding-process-app\" isExecutable=\"true\">\n    <bpmn:startEvent id=\"StartEventProcessStarted\" name=\"Contract Signed\">\n      <bpmn:extensionElements>\n        <camunda:formData>\n          <camunda:formField id=\"hrTeamListId\" label=\"HR Team List Id\" type=\"string\" defaultValue=\"6224fb77e6da385c2fb77dfe\" \/>\n          <camunda:formField id=\"itTeamListId\" label=\"IT Support Team List Id\" type=\"string\" defaultValue=\"6224fba4ba40576a507689d2\" \/>\n        <\/camunda:formData>\n      <\/bpmn:extensionElements>\n      <bpmn:outgoing>SequenceFlow1<\/bpmn:outgoing>\n    <\/bpmn:startEvent>\n    <bpmn:endEvent id=\"EndEventProcessEnded\">\n      <bpmn:incoming>Flow_1kor9pu<\/bpmn:incoming>\n    <\/bpmn:endEvent>\n    <bpmn:sequenceFlow id=\"SequenceFlow1\" sourceRef=\"StartEventProcessStarted\" targetRef=\"Activity_057zyn2\" \/>\n    <bpmn:serviceTask id=\"Activity_057zyn2\" name=\"Create Employee File\" camunda:asyncBefore=\"true\" camunda:class=\"org.sample.onboarding_process_app.AddTrelloCardDelegate\">\n      <bpmn:extensionElements>\n        <camunda:inputOutput>\n          <camunda:inputParameter name=\"listId\">${hrTeamListId}<\/camunda:inputParameter>\n          <camunda:inputParameter name=\"name\">Create Employee File<\/camunda:inputParameter>\n          <camunda:outputParameter name=\"createEmpFileCardId\">${cardId}<\/camunda:outputParameter>\n        <\/camunda:inputOutput>\n      <\/bpmn:extensionElements>\n      <bpmn:incoming>SequenceFlow1<\/bpmn:incoming>\n      <bpmn:outgoing>Flow_0y1x7md<\/bpmn:outgoing>\n    <\/bpmn:serviceTask>\n    <bpmn:sequenceFlow id=\"Flow_0y1x7md\" sourceRef=\"Activity_057zyn2\" targetRef=\"Event_11mfcla\" \/>\n    <bpmn:parallelGateway id=\"Gateway_0hr6sku\">\n      <bpmn:incoming>Flow_1yll0zt<\/bpmn:incoming>\n      <bpmn:outgoing>Flow_1iawg3g<\/bpmn:outgoing>\n      <bpmn:outgoing>Flow_1qc2rnu<\/bpmn:outgoing>\n    <\/bpmn:parallelGateway>\n    <bpmn:sequenceFlow id=\"Flow_1yll0zt\" sourceRef=\"Event_1nev8nc\" targetRef=\"Gateway_0hr6sku\" \/>\n    <bpmn:intermediateCatchEvent id=\"Event_1nev8nc\" name=\"Wait Until One Week Before Arrival\">\n      <bpmn:incoming>Flow_1pxlb90<\/bpmn:incoming>\n      <bpmn:outgoing>Flow_1yll0zt<\/bpmn:outgoing>\n      <bpmn:timerEventDefinition id=\"TimerEventDefinition_1tvrvty\">\n        <bpmn:timeDuration xsi:type=\"bpmn:tFormalExpression\">PT1M<\/bpmn:timeDuration>\n      <\/bpmn:timerEventDefinition>\n    <\/bpmn:intermediateCatchEvent>\n    <bpmn:serviceTask id=\"Activity_00hd7w7\" name=\"Send Welcome Package\" camunda:asyncBefore=\"true\" camunda:class=\"org.sample.onboarding_process_app.AddTrelloCardDelegate\">\n      <bpmn:extensionElements>\n        <camunda:inputOutput>\n          <camunda:inputParameter name=\"listId\">${hrTeamListId}<\/camunda:inputParameter>\n          <camunda:inputParameter name=\"name\">Send Welcome Package<\/camunda:inputParameter>\n          <camunda:outputParameter name=\"sendWelcomePackageCardId\">${cardId}<\/camunda:outputParameter>\n        <\/camunda:inputOutput>\n      <\/bpmn:extensionElements>\n      <bpmn:incoming>Flow_1iawg3g<\/bpmn:incoming>\n      <bpmn:outgoing>Flow_08zt2wg<\/bpmn:outgoing>\n    <\/bpmn:serviceTask>\n    <bpmn:sequenceFlow id=\"Flow_1iawg3g\" sourceRef=\"Gateway_0hr6sku\" targetRef=\"Activity_00hd7w7\" \/>\n    <bpmn:serviceTask id=\"Activity_152g2od\" name=\"Setup E-Mail Account\" camunda:asyncBefore=\"true\" camunda:class=\"org.sample.onboarding_process_app.AddTrelloCardDelegate\">\n      <bpmn:extensionElements>\n        <camunda:inputOutput>\n          <camunda:inputParameter name=\"listId\">${itTeamListId}<\/camunda:inputParameter>\n          <camunda:inputParameter name=\"name\">Setup E-Mail Account<\/camunda:inputParameter>\n          <camunda:outputParameter name=\"SetupEMailCardId\">${cardId}<\/camunda:outputParameter>\n        <\/camunda:inputOutput>\n      <\/bpmn:extensionElements>\n      <bpmn:incoming>Flow_1qc2rnu<\/bpmn:incoming>\n      <bpmn:outgoing>Flow_0ca1aua<\/bpmn:outgoing>\n    <\/bpmn:serviceTask>\n    <bpmn:sequenceFlow id=\"Flow_1qc2rnu\" sourceRef=\"Gateway_0hr6sku\" targetRef=\"Activity_152g2od\" \/>\n    <bpmn:sequenceFlow id=\"Flow_1pxlb90\" sourceRef=\"Event_11mfcla\" targetRef=\"Event_1nev8nc\" \/>\n    <bpmn:intermediateCatchEvent id=\"Event_11mfcla\">\n      <bpmn:extensionElements>\n        <camunda:inputOutput>\n          <camunda:inputParameter name=\"cardId\">${createEmpFileCardId}<\/camunda:inputParameter>\n        <\/camunda:inputOutput>\n      <\/bpmn:extensionElements>\n      <bpmn:incoming>Flow_0y1x7md<\/bpmn:incoming>\n      <bpmn:outgoing>Flow_1pxlb90<\/bpmn:outgoing>\n      <bpmn:messageEventDefinition id=\"MessageEventDefinition_0f3nun0\" messageRef=\"Message_16s6nu0\" \/>\n    <\/bpmn:intermediateCatchEvent>\n    <bpmn:sequenceFlow id=\"Flow_08zt2wg\" sourceRef=\"Activity_00hd7w7\" targetRef=\"Event_1bey4cc\" \/>\n    <bpmn:sequenceFlow id=\"Flow_0ca1aua\" sourceRef=\"Activity_152g2od\" targetRef=\"Event_1sppq9t\" \/>\n    <bpmn:parallelGateway id=\"Gateway_0ffoax7\">\n      <bpmn:incoming>Flow_0lrogf4<\/bpmn:incoming>\n      <bpmn:incoming>Flow_0fjhyko<\/bpmn:incoming>\n      <bpmn:outgoing>Flow_1kor9pu<\/bpmn:outgoing>\n    <\/bpmn:parallelGateway>\n    <bpmn:sequenceFlow id=\"Flow_1kor9pu\" sourceRef=\"Gateway_0ffoax7\" targetRef=\"EndEventProcessEnded\" \/>\n    <bpmn:intermediateCatchEvent id=\"Event_1bey4cc\">\n      <bpmn:extensionElements>\n        <camunda:inputOutput>\n          <camunda:inputParameter name=\"cardId\">${sendWelcomePackageCardId}<\/camunda:inputParameter>\n        <\/camunda:inputOutput>\n      <\/bpmn:extensionElements>\n      <bpmn:incoming>Flow_08zt2wg<\/bpmn:incoming>\n      <bpmn:outgoing>Flow_0lrogf4<\/bpmn:outgoing>\n      <bpmn:messageEventDefinition id=\"MessageEventDefinition_07bs209\" messageRef=\"Message_16s6nu0\" \/>\n    <\/bpmn:intermediateCatchEvent>\n    <bpmn:sequenceFlow id=\"Flow_0lrogf4\" sourceRef=\"Event_1bey4cc\" targetRef=\"Gateway_0ffoax7\" \/>\n    <bpmn:intermediateCatchEvent id=\"Event_1sppq9t\">\n      <bpmn:extensionElements>\n        <camunda:inputOutput>\n          <camunda:inputParameter name=\"cardId\">${SetupEMailCardId}<\/camunda:inputParameter>\n        <\/camunda:inputOutput>\n      <\/bpmn:extensionElements>\n      <bpmn:incoming>Flow_0ca1aua<\/bpmn:incoming>\n      <bpmn:outgoing>Flow_0fjhyko<\/bpmn:outgoing>\n      <bpmn:messageEventDefinition id=\"MessageEventDefinition_1waaqb6\" messageRef=\"Message_16s6nu0\" \/>\n    <\/bpmn:intermediateCatchEvent>\n    <bpmn:sequenceFlow id=\"Flow_0fjhyko\" sourceRef=\"Event_1sppq9t\" targetRef=\"Gateway_0ffoax7\" \/>\n  <\/bpmn:process>\n  <bpmn:message id=\"Message_16s6nu0\" name=\"trello-card-done-msg\" \/>\n  <bpmndi:BPMNDiagram id=\"BPMNDiagram_1\">\n    <bpmndi:BPMNPlane id=\"BPMNPlane_1\" bpmnElement=\"onboarding-process-app\">\n      <bpmndi:BPMNEdge id=\"Flow_0fjhyko_di\" bpmnElement=\"Flow_0fjhyko\">\n        <di:waypoint x=\"958\" y=\"310\" \/>\n        <di:waypoint x=\"1030\" y=\"310\" \/>\n        <di:waypoint x=\"1030\" y=\"235\" \/>\n      <\/bpmndi:BPMNEdge>\n      <bpmndi:BPMNEdge id=\"Flow_0lrogf4_di\" bpmnElement=\"Flow_0lrogf4\">\n        <di:waypoint x=\"958\" y=\"120\" \/>\n        <di:waypoint x=\"1030\" y=\"120\" \/>\n        <di:waypoint x=\"1030\" y=\"185\" \/>\n      <\/bpmndi:BPMNEdge>\n      <bpmndi:BPMNEdge id=\"Flow_1kor9pu_di\" bpmnElement=\"Flow_1kor9pu\">\n        <di:waypoint x=\"1055\" y=\"210\" \/>\n        <di:waypoint x=\"1152\" y=\"210\" \/>\n      <\/bpmndi:BPMNEdge>\n      <bpmndi:BPMNEdge id=\"Flow_0ca1aua_di\" bpmnElement=\"Flow_0ca1aua\">\n        <di:waypoint x=\"860\" y=\"310\" \/>\n        <di:waypoint x=\"922\" y=\"310\" \/>\n      <\/bpmndi:BPMNEdge>\n      <bpmndi:BPMNEdge id=\"Flow_08zt2wg_di\" bpmnElement=\"Flow_08zt2wg\">\n        <di:waypoint x=\"860\" y=\"120\" \/>\n        <di:waypoint x=\"922\" y=\"120\" \/>\n      <\/bpmndi:BPMNEdge>\n      <bpmndi:BPMNEdge id=\"Flow_1pxlb90_di\" bpmnElement=\"Flow_1pxlb90\">\n        <di:waypoint x=\"458\" y=\"210\" \/>\n        <di:waypoint x=\"532\" y=\"210\" \/>\n      <\/bpmndi:BPMNEdge>\n      <bpmndi:BPMNEdge id=\"Flow_1qc2rnu_di\" bpmnElement=\"Flow_1qc2rnu\">\n        <di:waypoint x=\"640\" y=\"235\" \/>\n        <di:waypoint x=\"640\" y=\"310\" \/>\n        <di:waypoint x=\"760\" y=\"310\" \/>\n      <\/bpmndi:BPMNEdge>\n      <bpmndi:BPMNEdge id=\"Flow_1iawg3g_di\" bpmnElement=\"Flow_1iawg3g\">\n        <di:waypoint x=\"640\" y=\"185\" \/>\n        <di:waypoint x=\"640\" y=\"120\" \/>\n        <di:waypoint x=\"760\" y=\"120\" \/>\n      <\/bpmndi:BPMNEdge>\n      <bpmndi:BPMNEdge id=\"Flow_1yll0zt_di\" bpmnElement=\"Flow_1yll0zt\">\n        <di:waypoint x=\"568\" y=\"210\" \/>\n        <di:waypoint x=\"615\" y=\"210\" \/>\n      <\/bpmndi:BPMNEdge>\n      <bpmndi:BPMNEdge id=\"Flow_0y1x7md_di\" bpmnElement=\"Flow_0y1x7md\">\n        <di:waypoint x=\"380\" y=\"210\" \/>\n        <di:waypoint x=\"422\" y=\"210\" \/>\n      <\/bpmndi:BPMNEdge>\n      <bpmndi:BPMNEdge id=\"SequenceFlow_08va5r8_di\" bpmnElement=\"SequenceFlow1\">\n        <di:waypoint x=\"218\" y=\"210\" \/>\n        <di:waypoint x=\"280\" y=\"210\" \/>\n        <bpmndi:BPMNLabel>\n          <dc:Bounds x=\"337.5\" y=\"110\" width=\"90\" height=\"20\" \/>\n        <\/bpmndi:BPMNLabel>\n      <\/bpmndi:BPMNEdge>\n      <bpmndi:BPMNShape id=\"_BPMNShape_StartEvent_2\" bpmnElement=\"StartEventProcessStarted\">\n        <dc:Bounds x=\"182\" y=\"192\" width=\"36\" height=\"36\" \/>\n        <bpmndi:BPMNLabel>\n          <dc:Bounds x=\"160\" y=\"235\" width=\"80\" height=\"14\" \/>\n        <\/bpmndi:BPMNLabel>\n      <\/bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"EndEvent_0fkea3f_di\" bpmnElement=\"EndEventProcessEnded\">\n        <dc:Bounds x=\"1152\" y=\"192\" width=\"36\" height=\"36\" \/>\n        <bpmndi:BPMNLabel>\n          <dc:Bounds x=\"1150\" y=\"228\" width=\"40\" height=\"27\" \/>\n        <\/bpmndi:BPMNLabel>\n      <\/bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Activity_057zyn2_di\" bpmnElement=\"Activity_057zyn2\">\n        <dc:Bounds x=\"280\" y=\"170\" width=\"100\" height=\"80\" \/>\n      <\/bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Gateway_1ir3303_di\" bpmnElement=\"Gateway_0hr6sku\">\n        <dc:Bounds x=\"615\" y=\"185\" width=\"50\" height=\"50\" \/>\n      <\/bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Event_1fgfep7_di\" bpmnElement=\"Event_1nev8nc\">\n        <dc:Bounds x=\"532\" y=\"192\" width=\"36\" height=\"36\" \/>\n        <bpmndi:BPMNLabel>\n          <dc:Bounds x=\"518\" y=\"235\" width=\"70\" height=\"40\" \/>\n        <\/bpmndi:BPMNLabel>\n      <\/bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Activity_00hd7w7_di\" bpmnElement=\"Activity_00hd7w7\">\n        <dc:Bounds x=\"760\" y=\"80\" width=\"100\" height=\"80\" \/>\n      <\/bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Activity_152g2od_di\" bpmnElement=\"Activity_152g2od\">\n        <dc:Bounds x=\"760\" y=\"270\" width=\"100\" height=\"80\" \/>\n      <\/bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Event_0iy2qvo_di\" bpmnElement=\"Event_11mfcla\">\n        <dc:Bounds x=\"422\" y=\"192\" width=\"36\" height=\"36\" \/>\n      <\/bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Gateway_1yhgmrl_di\" bpmnElement=\"Gateway_0ffoax7\">\n        <dc:Bounds x=\"1005\" y=\"185\" width=\"50\" height=\"50\" \/>\n      <\/bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Event_1bey4cc_di\" bpmnElement=\"Event_1bey4cc\">\n        <dc:Bounds x=\"922\" y=\"102\" width=\"36\" height=\"36\" \/>\n      <\/bpmndi:BPMNShape>\n      <bpmndi:BPMNShape id=\"Event_1sppq9t_di\" bpmnElement=\"Event_1sppq9t\">\n        <dc:Bounds x=\"922\" y=\"292\" width=\"36\" height=\"36\" \/>\n      <\/bpmndi:BPMNShape>\n    <\/bpmndi:BPMNPlane>\n  <\/bpmndi:BPMNDiagram>\n<\/bpmn:definitions>\n';
+      importXML(diagramXML);
+
+    })(window.BpmnJS, window.jQuery);
+  </script>
+</body>
+</html>

@@ -1,0 +1,206 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" id="Definitions_1" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="4.11.1">
+  <bpmn:process id="onboarding-process-app" name="onboarding-process-app" isExecutable="true">
+    <bpmn:startEvent id="StartEventProcessStarted" name="Contract Signed">
+      <bpmn:extensionElements>
+        <camunda:formData>
+          <camunda:formField id="hrTeamListId" label="HR Team List Id" type="string" defaultValue="6224fb77e6da385c2fb77dfe" />
+          <camunda:formField id="itTeamListId" label="IT Support Team List Id" type="string" defaultValue="6224fba4ba40576a507689d2" />
+        </camunda:formData>
+      </bpmn:extensionElements>
+      <bpmn:outgoing>SequenceFlow1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:endEvent id="EndEventProcessEnded">
+      <bpmn:incoming>Flow_1kor9pu</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="SequenceFlow1" sourceRef="StartEventProcessStarted" targetRef="Activity_057zyn2" />
+    <bpmn:serviceTask id="Activity_057zyn2" name="Create Employee File" camunda:asyncBefore="true" camunda:class="org.sample.onboarding_process_app.AddTrelloCardDelegate">
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="listId">${hrTeamListId}</camunda:inputParameter>
+          <camunda:inputParameter name="name">Create Employee File</camunda:inputParameter>
+          <camunda:outputParameter name="createEmpFileCardId">${cardId}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+      <bpmn:incoming>SequenceFlow1</bpmn:incoming>
+      <bpmn:outgoing>Flow_0y1x7md</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="Flow_0y1x7md" sourceRef="Activity_057zyn2" targetRef="Event_11mfcla" />
+    <bpmn:parallelGateway id="Gateway_0hr6sku">
+      <bpmn:incoming>Flow_1yll0zt</bpmn:incoming>
+      <bpmn:outgoing>Flow_1iawg3g</bpmn:outgoing>
+      <bpmn:outgoing>Flow_1qc2rnu</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:sequenceFlow id="Flow_1yll0zt" sourceRef="Event_1nev8nc" targetRef="Gateway_0hr6sku" />
+    <bpmn:intermediateCatchEvent id="Event_1nev8nc" name="Wait Until One Week Before Arrival">
+      <bpmn:incoming>Flow_1pxlb90</bpmn:incoming>
+      <bpmn:outgoing>Flow_1yll0zt</bpmn:outgoing>
+      <bpmn:timerEventDefinition id="TimerEventDefinition_1tvrvty">
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT1M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:serviceTask id="Activity_00hd7w7" name="Send Welcome Package" camunda:asyncBefore="true" camunda:class="org.sample.onboarding_process_app.AddTrelloCardDelegate">
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="listId">${hrTeamListId}</camunda:inputParameter>
+          <camunda:inputParameter name="name">Send Welcome Package</camunda:inputParameter>
+          <camunda:outputParameter name="sendWelcomePackageCardId">${cardId}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_1iawg3g</bpmn:incoming>
+      <bpmn:outgoing>Flow_08zt2wg</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="Flow_1iawg3g" sourceRef="Gateway_0hr6sku" targetRef="Activity_00hd7w7" />
+    <bpmn:serviceTask id="Activity_152g2od" name="Setup E-Mail Account" camunda:asyncBefore="true" camunda:class="org.sample.onboarding_process_app.AddTrelloCardDelegate">
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="listId">${itTeamListId}</camunda:inputParameter>
+          <camunda:inputParameter name="name">Setup E-Mail Account</camunda:inputParameter>
+          <camunda:outputParameter name="SetupEMailCardId">${cardId}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_1qc2rnu</bpmn:incoming>
+      <bpmn:outgoing>Flow_0ca1aua</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="Flow_1qc2rnu" sourceRef="Gateway_0hr6sku" targetRef="Activity_152g2od" />
+    <bpmn:sequenceFlow id="Flow_1pxlb90" sourceRef="Event_11mfcla" targetRef="Event_1nev8nc" />
+    <bpmn:intermediateCatchEvent id="Event_11mfcla">
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="cardId">${createEmpFileCardId}</camunda:inputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_0y1x7md</bpmn:incoming>
+      <bpmn:outgoing>Flow_1pxlb90</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MessageEventDefinition_0f3nun0" messageRef="Message_16s6nu0" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:sequenceFlow id="Flow_08zt2wg" sourceRef="Activity_00hd7w7" targetRef="Event_1bey4cc" />
+    <bpmn:sequenceFlow id="Flow_0ca1aua" sourceRef="Activity_152g2od" targetRef="Event_1sppq9t" />
+    <bpmn:parallelGateway id="Gateway_0ffoax7">
+      <bpmn:incoming>Flow_0lrogf4</bpmn:incoming>
+      <bpmn:incoming>Flow_0fjhyko</bpmn:incoming>
+      <bpmn:outgoing>Flow_1kor9pu</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:sequenceFlow id="Flow_1kor9pu" sourceRef="Gateway_0ffoax7" targetRef="EndEventProcessEnded" />
+    <bpmn:intermediateCatchEvent id="Event_1bey4cc">
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="cardId">${sendWelcomePackageCardId}</camunda:inputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_08zt2wg</bpmn:incoming>
+      <bpmn:outgoing>Flow_0lrogf4</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MessageEventDefinition_07bs209" messageRef="Message_16s6nu0" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:sequenceFlow id="Flow_0lrogf4" sourceRef="Event_1bey4cc" targetRef="Gateway_0ffoax7" />
+    <bpmn:intermediateCatchEvent id="Event_1sppq9t">
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="cardId">${SetupEMailCardId}</camunda:inputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_0ca1aua</bpmn:incoming>
+      <bpmn:outgoing>Flow_0fjhyko</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MessageEventDefinition_1waaqb6" messageRef="Message_16s6nu0" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:sequenceFlow id="Flow_0fjhyko" sourceRef="Event_1sppq9t" targetRef="Gateway_0ffoax7" />
+  </bpmn:process>
+  <bpmn:message id="Message_16s6nu0" name="trello-card-done-msg" />
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="onboarding-process-app">
+      <bpmndi:BPMNEdge id="Flow_0fjhyko_di" bpmnElement="Flow_0fjhyko">
+        <di:waypoint x="958" y="310" />
+        <di:waypoint x="1030" y="310" />
+        <di:waypoint x="1030" y="235" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0lrogf4_di" bpmnElement="Flow_0lrogf4">
+        <di:waypoint x="958" y="120" />
+        <di:waypoint x="1030" y="120" />
+        <di:waypoint x="1030" y="185" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1kor9pu_di" bpmnElement="Flow_1kor9pu">
+        <di:waypoint x="1055" y="210" />
+        <di:waypoint x="1152" y="210" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0ca1aua_di" bpmnElement="Flow_0ca1aua">
+        <di:waypoint x="860" y="310" />
+        <di:waypoint x="922" y="310" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_08zt2wg_di" bpmnElement="Flow_08zt2wg">
+        <di:waypoint x="860" y="120" />
+        <di:waypoint x="922" y="120" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1pxlb90_di" bpmnElement="Flow_1pxlb90">
+        <di:waypoint x="458" y="210" />
+        <di:waypoint x="532" y="210" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1qc2rnu_di" bpmnElement="Flow_1qc2rnu">
+        <di:waypoint x="640" y="235" />
+        <di:waypoint x="640" y="310" />
+        <di:waypoint x="760" y="310" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1iawg3g_di" bpmnElement="Flow_1iawg3g">
+        <di:waypoint x="640" y="185" />
+        <di:waypoint x="640" y="120" />
+        <di:waypoint x="760" y="120" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1yll0zt_di" bpmnElement="Flow_1yll0zt">
+        <di:waypoint x="568" y="210" />
+        <di:waypoint x="615" y="210" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0y1x7md_di" bpmnElement="Flow_0y1x7md">
+        <di:waypoint x="380" y="210" />
+        <di:waypoint x="422" y="210" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SequenceFlow_08va5r8_di" bpmnElement="SequenceFlow1">
+        <di:waypoint x="218" y="210" />
+        <di:waypoint x="280" y="210" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="337.5" y="110" width="90" height="20" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="_BPMNShape_StartEvent_2" bpmnElement="StartEventProcessStarted">
+        <dc:Bounds x="182" y="192" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="160" y="235" width="80" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_0fkea3f_di" bpmnElement="EndEventProcessEnded">
+        <dc:Bounds x="1152" y="192" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1150" y="228" width="40" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_057zyn2_di" bpmnElement="Activity_057zyn2">
+        <dc:Bounds x="280" y="170" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_1ir3303_di" bpmnElement="Gateway_0hr6sku">
+        <dc:Bounds x="615" y="185" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_1fgfep7_di" bpmnElement="Event_1nev8nc">
+        <dc:Bounds x="532" y="192" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="518" y="235" width="70" height="40" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_00hd7w7_di" bpmnElement="Activity_00hd7w7">
+        <dc:Bounds x="760" y="80" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_152g2od_di" bpmnElement="Activity_152g2od">
+        <dc:Bounds x="760" y="270" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_0iy2qvo_di" bpmnElement="Event_11mfcla">
+        <dc:Bounds x="422" y="192" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_1yhgmrl_di" bpmnElement="Gateway_0ffoax7">
+        <dc:Bounds x="1005" y="185" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_1bey4cc_di" bpmnElement="Event_1bey4cc">
+        <dc:Bounds x="922" y="102" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_1sppq9t_di" bpmnElement="Event_1sppq9t">
+        <dc:Bounds x="922" y="292" width="36" height="36" />
+      </bpmndi:BPMNShape>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
